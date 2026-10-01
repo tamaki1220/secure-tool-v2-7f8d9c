@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ja"
+      xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8"></meta>
+    <title>menulette</title>
+    <style>
+        body{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        form{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        input{
+            margin: 8px 0;
+            padding: 5px;
+        }
+
+        #login{
+            background-color: rgb(0, 115, 255);
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+  <form id="loginForm" th:action="@{/login}" method="post">   
+    <h2>ログイン</h2>
+    <p th:if="${error}" th:text="${error}" style="color: red;"></p>
+    <input type="text" id="user_id" name="userId" placeholder="ユーザーID">
+    <input type="submit" id="login" value="ログイン">
+  </form>
+</body>
+</html>
