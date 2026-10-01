@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>menulette</title>
+    <style>
+        .body{padding: 20px; text-align: center;}
+        .container{max-width: 600px; text-align: center; border-width: 2px;}
+        .nav{display: flex; justify-content: center; align-items: center; gap: 80px;}
+        #calender{
+            display: grid; 
+            grid-template-columns: repeat(7, 1fr); 
+            border: 1px solid #ddd;
+            margin: 0 30px;} 
+        .cell { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        .header{font-weight: bold; background: #eee; border: 1px solid #ddd; text-align: center;}
+        .day{cursor: pointer; min-height: 90px; background-color: #fff; border: 1px solid #ddd; text-align: left; padding-left: 10px;}
+        .day:hover{background-color: #eee;}
+        .sun{color: red;}
+        .sat{color: blue;}
+
+        #menuModal, #calendarModal, #addModal, #dayModal {
+            display: none;
+            position: fixed;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+        }
+
+        .modal-content, .add-modal-content {
+            background-color: #fff;
+            width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border-radius: 5px;
+            padding: 20px;
+        }
+
+        .menu-list {
+            list-style: none;
+            padding: 0;
+            display: grid;
+            gap: 10px;
+            text-align: left;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .selected-menu {
+            margin-top: 5px;
+            font-size: 0.9em;
+            color: #333;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+
+        /* カテゴリーごとのメニュー表示スタイル */
+        .selected-menu.japanese {
+            background-color: rgb(255, 250, 160);
+            border: 1px solid #dcd670;
+        }
+
+        .selected-menu.western {
+            background-color: rgb(153, 248, 255);
+            border: 1px solid #85d6de;
+        }
+
+        .selected-menu.chinese {
+            background-color: rgb(255, 128, 128);
+            border: 1px solid #de8585;
+        }
+
+        /* 手動修正されたときの緑色スタイル */
+        .selected-menu.fixed {
+            background-color: rgb(153, 255, 153);
+            border: 1px solid #85de85;
+        }
+
+        #japanese {
+            flex: 1; 
+            border: 1px solid #000; 
+            border-radius: 5px; 
+            padding: 10px; 
+            background-color: rgb(255, 250, 160);
+        }
+
+        #western {
+            flex: 1; 
+            border: 1px solid #000; 
+            border-radius: 5px; 
+            padding: 10px; 
+            background-color: rgb(153, 248, 255);
+        }
+
+        #chinese {
+            flex: 1; 
+            border: 1px solid #000; 
+            border-radius: 5px; 
+            padding: 10px; 
+            background-color: rgb(255, 128, 128);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container">
+        <div class="nav">
+            <button onclick="changeMonth(-1)">＜前の月</button>
+            <h2 id="calendarTitle" style="text-align: center; width: 200px;"></h2>
+            <button onclick="changeMonth(1)">次の月＞</button>
+        </div>
+
+        <div id="btn" style="margin-bottom: 10px; text-align: center;">
+            <button type="button" onclick="openMenuModal()">メニュー</button>
+            <input type="button" id="start" value="スタート" onclick="startBtn()">
+        </div>
+
+        <div id="calender"></div>
+    </div>
+
+    <!-- メニューボタンを押したときのモーダル（メニュー一覧のみ） -->
+    <div class="modal" id="menuModal">
+        <div class="modal-content">        
+            <h2 style="text-align: center;">メニュー一覧</h2>
+
+            <div style="display: flex; gap: 5px; margin: 20px auto; padding: 0 20px;">
+                <div id="japanese">
+                    <h3 style="text-align: center; margin-top: 1px;">和食</h3>
+                    <ul class="menu-list" data-category="和食">
+                        <div th:each="item : ${menuName}" th:if="${item.category == '和食'}" th:id="'menu-item-' + ${item.menuId}">
+                            <label>
+                                <input type="checkbox" name="menu" th:value="${item.menuName}" th:attr="data-id=${item.menuId}" th:text="${item.menuName}" checked> 
+                            </label>
+                        </div>
+                    </ul>
+                    <div style="margin-top: 10px; display: flex; justify-content: center; gap: 10px;">
+                        <button type="button" onclick="openAddModal('和食')">追加</button>
+                    </div>
+                </div>
+
+                <div id="western">
+                    <h3 style="text-align: center; margin-top: 1px;">洋食</h3>
+                    <ul class="menu-list" data-category="洋食">
+                        <div th:each="item : ${menuName}" th:if="${item.category == '洋食'}" th:id="'menu-item-' + ${item.menuId}">
+                            <label>
+                                <input type="checkbox" name="menu" th:value="${item.menuName}" th:attr="data-id=${item.menuId}" th:text="${item.menuName}" checked> 
+                            </label>
+                        </div>
+                    </ul>
+                    <div style="margin-top: 10px; display: flex; justify-content: center; gap: 10px;">
+                        <button type="button" onclick="openAddModal('洋食')">追加</button>
+                    </div>
+                </div>
+
+                <div id="chinese">
+                    <h3 style="text-align: center; margin-top: 1px;">中華</h3>
+                    <ul class="menu-list" data-category="中華">
+                        <div th:each="item : ${menuName}" th:if="${item.category == '中華'}" th:id="'menu-item-' + ${item.menuId}">
+                            <label>
+                                <input type="checkbox" name="menu" th:value="${item.menuName}" th:attr="data-id=${item.menuId}" th:text="${item.menuName}" checked> 
+                            </label>
+                        </div>
+                    </ul>
+                    <div style="margin-top: 10px; display: flex; justify-content: center; gap: 10px;">
+                        <button type="button" onclick="openAddModal('中華')">追加</button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center;">
+                <button type="button" onclick="closeModal('menuModal')">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- カレンダーのマスを押したときのモーダル -->
+    <div class="modal" id="calendarModal">
+        <div class="modal-content">
+            <h3 id="selectDate" style="text-align: center; font-weight: bold;"></h3>
+            <div id="registeredMenu" style="margin: 10px 0; padding: 10px; background-color: #f9f9f9; border-radius: 4px; text-align: left;">
+                <!-- その日のメニュー情報 -->
+            </div>
+            
+            <div style="text-align: center; margin-top: 15px;">
+                <button type="button" onclick="fixModal()">修正</button>
+                <button type="button" onclick="closeModal('calendarModal')">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- メニューからのモーダル --> 
+    <div id="addModal" class="modal">
+        <div class="add-modal-content">
+            <h3 id="addModalTitle" style="text-align: center;">メニュー追加</h3>
+            <form id="menuForm" onsubmit="addMenu(event)">         
+                <div style="text-align: center;">
+                    <input type="text" id="add" name="menuName" placeholder="メニューを追加" style="padding: 5px; width: 80%;"><br>
+                    <div style="margin-top: 15px; display: flex; justify-content: center; gap: 10px;">
+                        <input type="submit" id="add_btn" value="追加">
+                        <button type="button" onclick="deleteSelectedMenus()">削除</button>
+                        <button type="button" onclick="closeAddModal()">キャンセル</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- カレンダーのマスからのモーダル（カテゴリー選択式） -->
+    <div id="dayModal" class="modal">
+        <div class="modal-content" style="width: 550px;">
+            <h3 id="addDayMenu" style="text-align: center;">メニュー修正</h3>
+            <form onsubmit="event.preventDefault(); executeFix(); return false;">
+                <div style="display: flex; gap: 5px; margin: 15px auto; padding: 0 10px;">
+                    <!-- 和食カテゴリー -->
+                    <div style="flex: 1; border: 1px solid #000; border-radius: 5px; padding: 10px; background-color: rgb(255, 250, 160);">
+                        <h4 style="text-align: center; margin: 0 0 10px 0;">和食</h4>
+                        <ul style="list-style: none; padding: 0; display: grid; gap: 8px; text-align: left; max-height: 180px; overflow-y: auto;">
+                            <div th:each="item : ${menuName}" th:if="${item.category == '和食'}">
+                                <label style="font-size: 0.9em; cursor: pointer;">
+                                    <input type="radio" name="fixMenuRadio" th:value="${item.menuName}" th:text="${item.menuName}"> 
+                                </label>
+                            </div>
+                        </ul>
+                    </div>
+
+                    <!-- 洋食カテゴリー -->
+                    <div style="flex: 1; border: 1px solid #000; border-radius: 5px; padding: 10px; background-color: rgb(153, 248, 255);">
+                        <h4 style="text-align: center; margin: 0 0 10px 0;">洋食</h4>
+                        <ul style="list-style: none; padding: 0; display: grid; gap: 8px; text-align: left; max-height: 180px; overflow-y: auto;">
+                            <div th:each="item : ${menuName}" th:if="${item.category == '洋食'}">
+                                <label style="font-size: 0.9em; cursor: pointer;">
+                                    <input type="radio" name="fixMenuRadio" th:value="${item.menuName}" th:text="${item.menuName}"> 
+                                </label>
+                            </div>
+                        </ul>
+                    </div>
+
+                    <!-- 中華カテゴリー -->
+                    <div style="flex: 1; border: 1px solid #000; border-radius: 5px; padding: 10px; background-color: rgb(255, 128, 128);">
+                        <h4 style="text-align: center; margin: 0 0 10px 0;">中華</h4>
+                        <ul style="list-style: none; padding: 0; display: grid; gap: 8px; text-align: left; max-height: 180px; overflow-y: auto;">
+                            <div th:each="item : ${menuName}" th:if="${item.category == '中華'}">
+                                <label style="font-size: 0.9em; cursor: pointer;">
+                                    <input type="radio" name="fixMenuRadio" th:value="${item.menuName}" th:text="${item.menuName}"> 
+                                </label>
+                            </div>
+                        </ul>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 15px;">
+                    <button type="submit" id="fix_btn">修正</button>
+                    <button type="button" onclick="closeModal('dayModal')">キャンセル</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script th:inline="javascript">
+        const savedDays = /*[[${savedDays}]]*/ [];
+        let currentViewDate = new Date();
+        let selectedDateStr = ""; 
+        let currentCategory = ""; 
+        let targetCategory = "";
+
+        function renderCalendar() {
+            const year = currentViewDate.getFullYear();
+            const month = currentViewDate.getMonth();
+            document.getElementById('calendarTitle').innerText = year + "年" + (month + 1) + "月";
+
+            const calender = document.getElementById('calender')
+            calender.innerHTML = "";
+            const days = ["日", "月", "火", "水", "木", "金", "土"];
+            days.forEach(d => {
+                let div = document.createElement('div');
+                div.className = 'cell header';
+                div.innerText = d;
+                calender.appendChild(div);
+            });
+
+            const firstDay = new Date(year, month, 1).getDay();
+            for(let i = 0; i < firstDay; i++) {
+                let emptyDiv = document.createElement('div');
+                calender.appendChild(emptyDiv);
+            }
+
+            const daysInMonth = new Date(year, month+1, 0).getDate();
+
+            for (let i = 1; i <= daysInMonth; i++) {
+                let date = new Date(year, month, i);
+                let div = document.createElement('div');
+                div.className = 'cell day';
+                if (date.getDay() === 0) div.classList.add('sun');
+                if (date.getDay() === 6) div.classList.add('sat');
+                const mStr = String(month + 1).padStart(2, '0');
+                const dStr = String(i).padStart(2, '0');
+                const dateStr = `${year}-${mStr}-${dStr}`;
+                div.setAttribute('data-date', dateStr);
+                div.innerText = i;
+                div.onclick = () => showForm(i, date);
+                
+                const found = savedDays.find(d => d.date === dateStr);
+                if (found) {
+                    let menuDiv = document.createElement('div');
+                    menuDiv.className = 'selected-menu';
+                    menuDiv.innerText = found.menuName;
+
+                    // カテゴリーや修正状態に応じてクラスを分岐
+                    if (found.category === 'fixed') {
+                        menuDiv.classList.add('fixed');
+                    } else if (found.category === '和食') {
+                        menuDiv.classList.add('japanese');
+                    } else if (found.category === '洋食') {
+                        menuDiv.classList.add('western');
+                    } else if (found.category === '中華') {
+                        menuDiv.classList.add('chinese');
+                    }
+
+                    div.appendChild(menuDiv);
+                }
+                calender.appendChild(div);
+            } 
+        }
+
+        function changeMonth(diff) {
+            currentViewDate.setMonth(currentViewDate.getMonth() + diff);
+            renderCalendar();
+            document.getElementById('menuModal').style.display = 'none';
+            document.getElementById('calendarModal').style.display = 'none';
+            document.getElementById('dayModal').style.display = 'none';
+        }
+
+        // カレンダーのマスを押したとき
+        function showForm(day, date) {
+            const modal = document.getElementById('calendarModal');
+            modal.style.display = 'flex';
+            
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(day).padStart(2, '0');
+            selectedDateStr = `${year}-${month}-${d}`;
+
+            document.getElementById('selectDate').innerText = `${year}年${Number(month)}月${day}日`;
+            
+            // その日に登録されているメニューを表示
+            const found = savedDays.find(item => item.date === selectedDateStr);
+            const registeredMenuDiv = document.getElementById('registeredMenu');
+            if (found) {
+                registeredMenuDiv.innerHTML = `<strong>その日のメニュー：</strong> ${found.menuName} (${found.category || '未分類'})`;
+            } else {
+                registeredMenuDiv.innerHTML = `<strong>その日のメニュー：</strong> 未登録`;
+            }
+        }
+
+        renderCalendar();
+
+        // メニューボタンを押したとき
+        function openMenuModal() {
+            const modal = document.getElementById('menuModal');
+            if (modal) {
+                modal.style.display = 'flex';
+            }
+        }
+
+        // モーダルを閉じる汎用関数
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        function openAddModal(category) {
+            targetCategory = category;
+            const menuModal = document.getElementById('menuModal');
+            if (menuModal) {
+                menuModal.style.display = 'none';
+            }
+            const calendarModal = document.getElementById('calendarModal');
+            if (calendarModal) {
+                calendarModal.style.display = 'none';
+            }
+
+            const title = document.getElementById('addModalTitle');
+            if (title && category) {
+                title.textContent = category + 'のメニュー追加';
+            }
+
+            const inputField = document.getElementById('add');
+            if (inputField) {
+                inputField.value = '';
+            }
+
+            const addModal = document.getElementById('addModal');
+            if (addModal) {
+                addModal.style.display = 'flex';
+            }
+        }
+
+        function closeAddModal() {
+            const modal = document.getElementById('addModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // カレンダーモーダルの「修正」ボタンを押したとき
+        function fixModal() {
+            const calendarModal = document.getElementById('calendarModal');
+            if (calendarModal) {
+                calendarModal.style.display = 'none';
+            }
+
+            // すでにその日に登録されているメニューがある場合、対応するラジオボタンにチェックを入れる
+            const found = savedDays.find(d => d.date === selectedDateStr);
+            const radios = document.querySelectorAll('input[name="fixMenuRadio"]');
+            radios.forEach(radio => {
+                if (found && radio.value === found.menuName) {
+                    radio.checked = true;
+                } else {
+                    radio.checked = false;
+                }
+            });
+
+            const dayModal = document.getElementById('dayModal');
+            if (dayModal) {
+                dayModal.style.display = 'flex';
+            }
+        }
+
+        function executeFix() {
+            const selectedRadio = document.querySelector('input[name="fixMenuRadio"]:checked');
+    
+            if (!selectedRadio) {
+                alert('メニューを選択してください');
+                return;
+            }
+
+            const menuName = selectedRadio.value;
+
+            const params = new URLSearchParams();
+            params.append('date', selectedDateStr);
+            params.append('menuName', menuName);
+
+            fetch('/menus/select', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: params
+            })
+            .then(response => response.text())
+            .then(result => {
+                if (result.trim() === "success") {
+                    let existing = savedDays.find(d => d.date === selectedDateStr);
+                    if (existing) {
+                        existing.menuName = menuName; 
+                        existing.category = 'fixed'; // 手動修正されたので緑色になるカテゴリーへ変更
+                    } else {
+                        savedDays.push({ date: selectedDateStr, menuName: menuName, category: 'fixed' }); 
+                    }
+            
+                    renderCalendar();
+                    closeModal('dayModal');
+                } else {
+                    alert('保存に失敗しました。');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('通信エラーが発生しました。');
+            });
+        }
+
+        async function addMenu(event) {
+            event.preventDefault();
+
+            const menuNameInput = document.getElementById('add');
+            const menuName = menuNameInput.value.trim();
+
+            if (!menuName) {
+                alert('メニュー名を入力してください');
+                return;
+            }
+
+            const params = new URLSearchParams();
+            params.append('category', targetCategory);
+            params.append('menuName', menuName);
+
+            try {
+                const response = await fetch('/menus/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: params
+                });
+
+                const result = await response.text();
+
+                if (result.trim() === "success") {
+                    alert('メニューを追加しました');
+
+                    const ulList = document.querySelector(`ul.menu-list[data-category="${targetCategory}"]`);
+                    if (ulList) {
+                        const div = document.createElement('div');
+                        const label = document.createElement('label');
+                        const input = document.createElement('input');
+                        
+                        input.type = 'checkbox';
+                        input.name = 'menu';
+                        input.value = menuName;
+                        input.checked = true;
+
+                        label.appendChild(input);
+                        label.appendChild(document.createTextNode(' ' + menuName));
+                        div.appendChild(label);
+
+                        ulList.appendChild(div);
+                    }
+
+                    closeAddModal();
+                    openMenuModal();
+                } else {
+                    alert('追加に失敗しました。');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('通信エラーが発生しました。');
+            }
+        }
+
+        // スタートボタンが押されたときの処理（ランダム献立作成）
+        async function startBtn() {
+            const checkedMenus = document.querySelectorAll('input[name="menu"]:checked');
+
+            if (checkedMenus.length === 0) {
+                alert('利用可能なメニューが選択されていません。「メニュー」ボタンからメニューを確認・追加してください。');
+                return;
+            }
+
+            const menuArray = [];
+            checkedMenus.forEach(input => {
+                const menuName = input.value;
+                const ul = input.closest('ul.menu-list');
+                const category = ul ? ul.getAttribute('data-category') : '';
+                
+                menuArray.push({ menuName: menuName, category: category });
+            });
+
+            const year = currentViewDate.getFullYear();
+            const month = currentViewDate.getMonth();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const monthDataList = [];
+
+            for (let i = 1; i <= daysInMonth; i++) {
+                const mStr = String(month + 1).padStart(2, '0');
+                const dStr = String(i).padStart(2, '0');
+                const dateStr = `${year}-${mStr}-${dStr}`;
+
+                const randomIndex = Math.floor(Math.random() * menuArray.length);
+                const selected = menuArray[randomIndex];
+
+                let existing = savedDays.find(d => d.date === dateStr);
+                if (existing) {
+                    existing.menuName = selected.menuName;
+                    existing.category = selected.category; 
+                } else {
+                    savedDays.push({ 
+                        date: dateStr, 
+                        menuName: selected.menuName, 
+                        category: selected.category 
+                    });
+                }
+
+                monthDataList.push({
+                    date: dateStr,
+                    menuName: selected.menuName,
+                    category: selected.category
+                });
+            }
+            try {
+                const response = await fetch('/menus/save-month', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(monthDataList)
+                });
+
+                const result = await response.text();
+
+                if (result.trim() === "success") {
+                    renderCalendar();
+                    alert('今月のメニューをランダムに作成し、DBに保存しました！');
+                } else {
+                    alert('DBへの保存に失敗しました。');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('通信エラーが発生しました。');
+            }
+        }
+
+        const SECRET_KEY = "tamaki1220_araishi";
+        const urlPARAMS = new URLSearchParams(window.location.search);
+        const userKey = urlParams.get('key');
+
+        if (userKey === SECRET_KEY) {
+            document.getElementById('app-content').style.display = 'block';
+            document.getElementById('error-message').style.display = 'none';
+        } else {
+            document.getElementById('app-content').style.display = 'none';
+            document.getElementById('error-message').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
